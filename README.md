@@ -1,4 +1,4 @@
-# Databricks Workspace Detection App
+# Databricks Workspace Detection Analytics Tool
 
 A collection of security detection notebooks for Databricks workspaces that analyze the `system.access.audit` table to identify potential security threats and suspicious activities.
 
@@ -83,7 +83,7 @@ The latest version includes advanced detection scenarios that go beyond basic au
 - Appropriate permissions to create and run workflows
 
 ### Setup
-1. **Import the App**: Add the detection notebooks to your Databricks workspace
+1. **Import the Repo**: Add the detection notebooks to your Databricks workspace. ([Documentation](https://docs.databricks.com/aws/en/repos/git-operations-with-repos#clone-a-repo-connected-to-a-remote-git-repository))
 2. **Configure Workflows**: Set up Databricks workflows for each detection
 3. **Adjust Parameters**: Modify start/end times and detection parameters as needed
 4. **Schedule Execution**: Configure trigger schedules matching your lookback periods
