@@ -4,7 +4,7 @@
 # MAGIC
 # MAGIC This notebook generates a new investigative notebook focused on the behavior of 
 # MAGIC a specific user across multiple security detections. The new notebook will be
-# MAGIC stored in the same folder as this notebook, and can be run to analyze the user's behavior.
+# MAGIC stored in the "generated" folder and the full path to the notebook will be printed below in Cell 13 and can be run to analyze the user's behavior.
 # MAGIC
 # MAGIC **Parameters:**
 # MAGIC - `user_email`: Email address of the user to analyze
