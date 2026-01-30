@@ -47,13 +47,13 @@ cybersec-workspace-detection-app/
 
 ## Threat Model Investigations
 
-Generate focused investigation notebooks combining multiple detections for specific threat scenarios. Based on [Databricks Security Best Practices](https://www.databricks.com/trust/security-features/security-best-practices).
+Generate focused investigation notebooks combining multiple detections for specific threat scenarios. Based on [Databricks Security Best Practices](https://www.databricks.com/trust/security-features/best-practices).
 
 ### Available Threat Models
 
 | Threat Model | Detections | Risk Description (Source: Databricks SBP) |
 |-------------|-----------|-------------------------------------------|
-| **Account Takeover or Compromise** | 14 detections | Databricks is a general-purpose compute platform that customers can set up to access critical data sources. If credentials belonging to a user were compromised by phishing, brute force, or other methods, an attacker might get access to all of the data accessible from the environment. |
+| **Account Takeover or Compromise** | 14 detections | Databricks is a general-purpose compute platform that customers can set up to access critical data sources. If credentials belonging to a user were compromised by phishing, brute force, or other methods, an attacker might get access to all of the data accessible by the compromised user from the environment. |
 | **Data Exfiltration** | 8 detections | If a malicious user or an attacker is able to log into a customer's environment, they may be able to exfiltrate sensitive data and then store it, sell it, or ransom it. |
 | **Insider Threat** | 14 detections | High-performing engineers and data professionals will generally find the best or fastest way to complete their tasks, but sometimes that may do so in ways that create security impacts to their organizations. One user may think their job would be much easier if they didn't have to deal with security controls, or another might copy some data to simplify sharing of data. |
 | **Supply Chain Attacks** | 3 detections | Historically, supply chain attacks have relied upon injecting malicious code into software libraries. More recently, we have started to see the emergence of AI model and data supply chain attacks, whereby the model, its weights or the data itself is maliciously altered. |
@@ -264,9 +264,9 @@ display(result)
 
 ## Additional Resources
 
-- **[Databricks Security Best Practices](https://www.databricks.com/trust/security-features/security-best-practices)** - Official security guidance
+- **[Databricks Security Best Practices](https://www.databricks.com/trust/security-features/best-practices)** - Official security guidance
 - **[Detection Tracker](/docs/detection_tracker.md)** - Complete detection inventory with current and planned detections
-- **[Security Analysis Tool (SAT)](https://docs.databricks.com/security/analysis-tool/index.html)** - Automated security configuration monitoring
+- **[Security Analysis Tool (SAT)](https://github.com/databricks-industry-solutions/security-analysis-tool)** - Automated security configuration monitoring
 
 ---
 
