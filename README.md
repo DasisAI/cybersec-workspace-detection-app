@@ -1,79 +1,224 @@
-# Databricks Workspace Detection Analytics Tool
+# Databricks Detection Tool
 
 A collection of security detection notebooks for Databricks workspaces that analyze the `system.access.audit` table to identify potential security threats and suspicious activities.
 
-## Overview
+## Quick Start
 
-This detection app provides 30+ pre-built security detection notebooks designed for security operations teams to monitor Databricks workspace activities. The detections cover various security scenarios including:
+### What's Inside
 
-- **Authentication & Access Control**: Token creation/deletion, MFA changes, SSO configuration changes
-- **User Management**: Account creation/deletion, role modifications, group changes
-- **Session Security**: Session hijacking detection, multi-device login patterns
-- **Administrative Activity**: Privilege escalation, admin activity spikes
-- **Audit & Compliance**: Verbose logging changes, audit configuration tampering
+This tool provides **31 security detections** organized by urgency and investigation approach:
+- **13 Binary Detections** - High-confidence alerts for immediate response (24-hour default window)
+- **18 Behavioral Detections** - Pattern analysis for threat hunting (30-day default window)
 
-## Features
+### Three Ways to Use This Tool
 
-- **Coverage**: 30+ detection scenarios covering major security use cases
-- **Production Ready**: Designed for batch execution via Databricks workflows
-- **Configurable**: Customizable time ranges and detection parameters
-- **Audit Table Focus**: Leverages Databricks `system.access.audit` table for comprehensive visibility
-- **Unity Catalog Compatible**: Designed for Unity Catalog enabled accounts
-- **MITRE ATT&CK Mapped**: Many detections include MITRE ATT&CK framework mappings for threat intelligence
+1. **🎯 Threat Model Investigations** - Generate investigation notebooks for 7 specific threat scenarios (Recommended for newcomers)
+2. **📊 User Behavior Analysis** - Generate user-specific activity reports
+3. **🔍 Individual Detections** - Execute specific detection notebooks for targeted analysis
+
+👉 **New to this tool?** Start with [Threat Model Investigations](#threat-model-investigations) to investigate common security scenarios.
+
+---
+
+## Repository Structure
+
+```
+cybersec-workspace-detection-app/
+├── base/
+│   ├── detections/
+│   │   ├── binary/          # 13 immediate alert detections (24-hour window)
+│   │   └── behavioral/      # 18 threat hunting detections (30-day window)
+│   └── notebooks/
+│       ├── threat_models/   # 7 threat model notebook generators
+│       │   ├── threat_model_account_takeover.py
+│       │   ├── threat_model_data_exfiltration.py
+│       │   └── ... (5 more)
+│       ├── user_behavior_analysis.py  # User investigation generator
+│       └── run_all_detections.py      # Batch execution utility
+├── lib/
+│   ├── common.py            # Shared detection utilities
+│   ├── threat_model_mappings.py  # Detection-to-threat-model mappings
+│   └── notebook_generator_base.py  # Notebook generation logic
+└── docs/
+    └── detection_tracker.md # Complete detection inventory
+```
+
+---
+
+## Threat Model Investigations
+
+Generate focused investigation notebooks combining multiple detections for specific threat scenarios. Based on [Databricks Security Best Practices](https://www.databricks.com/trust/security-features/security-best-practices).
+
+### Available Threat Models
+
+| Threat Model | Detections | Risk Description (Source: Databricks SBP) |
+|-------------|-----------|-------------------------------------------|
+| **Account Takeover or Compromise** | 14 detections | Databricks is a general-purpose compute platform that customers can set up to access critical data sources. If credentials belonging to a user were compromised by phishing, brute force, or other methods, an attacker might get access to all of the data accessible from the environment. |
+| **Data Exfiltration** | 8 detections | If a malicious user or an attacker is able to log into a customer's environment, they may be able to exfiltrate sensitive data and then store it, sell it, or ransom it. |
+| **Insider Threat** | 14 detections | High-performing engineers and data professionals will generally find the best or fastest way to complete their tasks, but sometimes that may do so in ways that create security impacts to their organizations. One user may think their job would be much easier if they didn't have to deal with security controls, or another might copy some data to simplify sharing of data. |
+| **Supply Chain Attacks** | 3 detections | Historically, supply chain attacks have relied upon injecting malicious code into software libraries. More recently, we have started to see the emergence of AI model and data supply chain attacks, whereby the model, its weights or the data itself is maliciously altered. |
+| **Potential Compromise of Databricks** | 4 detections | Security-minded customers sometimes voice a concern that Databricks itself might be compromised, which could result in the compromise of their environment. |
+| **Ransomware Attacks** | 9 detections | Ransomware is a type of malware designed to deny an individual or organization access to their data, usually for the purposes of extortion. Encryption is often used as the vehicle for this attack. |
+| **Resource Abuse** | 3 detections | Databricks can deploy large amounts of compute power. As such, it could be a valuable target for crypto mining if a customer's user account were compromised. |
+
+### How to Generate a Threat Model Investigation
+
+**Step 1: Run a Threat Model Generator**
+
+Execute one of the 7 generator notebooks from your Databricks workspace:
+
+```python
+# Example: Generate Account Takeover investigation notebook
+dbutils.notebook.run(
+    "/Workspace/Repos/.../base/notebooks/threat_models/threat_model_account_takeover",
+    timeout=3600,
+    arguments={
+        "time_range_days": "30",        # Window for behavioral detections
+        "binary_time_range_hours": "24" # Window for binary detections
+    }
+)
+```
+
+**Step 2: Review Generated Notebook**
+
+The generator creates a timestamped investigation notebook in `/generated/` containing:
+- All relevant detections for that threat model
+- Appropriate time windows for each detection type
+- Detection metadata and risk descriptions
+- Summary statistics
+
+**Step 3: Execute Generated Notebook**
+
+Run the generated notebook to execute all detections and review findings.
+
+### Available Generators
+
+```
+/base/notebooks/threat_models/threat_model_account_takeover.py
+/base/notebooks/threat_models/threat_model_data_exfiltration.py
+/base/notebooks/threat_models/threat_model_insider_threat.py
+/base/notebooks/threat_models/threat_model_supply_chain.py
+/base/notebooks/threat_models/threat_model_databricks_compromise.py
+/base/notebooks/threat_models/threat_model_ransomware.py
+/base/notebooks/threat_models/threat_model_resource_abuse.py
+```
+
+**NOTE:** While activity might be shown, it does not automatically mean that malicious activity has occurred. It is important to investigate results in coordination with your usage of Databricks.
+
+---
+
+## User Behavior Analysis
+
+Run user-specific analysis to examine all activities for a specific user across all detections.
+
+Open and run the notebook directly in your Databricks workspace:
+
+```
+/base/notebooks/user_behavior_analysis.py
+```
+
+When prompted, provide the following parameters:
+- **user_email**: Email address of the user to analyze
+- **time_range_days**: Number of days to look back (default: 30)
+
+The notebook will run all detections filtered to the specified user and display results inline.
+
+---
 
 ## Detection Categories
 
-### Authentication & Identity
-- Access Token Created/Deleted
-- MFA Key Added/Deleted  
-- Non-SSO Login Detection
-- User Password Changes
-- SSO Configuration Changes
+### Binary Detections (13 Total)
 
-### User & Group Management
-- User Account Created/Deleted
-- Group Created/Deleted
-- Principal Added/Removed from Groups
-- User Role Modifications
+**Purpose**: Immediate alerts for high-confidence security events
+**Time Window**: 24 hours (configurable)
+**Use Case**: Real-time monitoring and alerting
 
-### Session Security
-- Session Hijacking Detection (Multiple IPs/Devices)
-- High Session Count Detection
-- Frequent Login Patterns
-- Multi-Device Session Reuse
+> **Note:** Events generated by these detections do not automatically indicate malicious activity. Many events occur during normal platform usage (e.g., configuration changes by admins, user management operations). Always investigate results in the context of your organization's expected Databricks usage patterns.
 
-### Administrative Monitoring
-- Spike in Table Admin Activity
-- Databricks Employee Logon Detection
-- Verbose Audit Logging Disabled
+#### Configuration & Policy Changes (7)
+- SSO Configuration Changes - `/base/detections/binary/sso_config_changed.py`
+- Workspace-Level Configuration Changes - `/base/detections/binary/configuration_changes_workspace_level.py`
+- Account-Level Configuration Changes - `/base/detections/binary/configuration_changes_account_level.py`
+- High Priority Configuration Changes - `/base/detections/binary/configuration_changes_high_priority.py`
+- Verbose Audit Logging Disabled - `/base/detections/binary/verbose_audit_logging_disabled.py`
+- Attempted Logon from Denied IP - `/base/detections/binary/attempted_logon_from_denied_ip.py`
+- Databricks Employee Logon Detection - `/base/detections/binary/databricks_employee_logon.py`
 
-### Network & Access Control
-- Attempted Logon from Denied IP
-- Token Scanning Activity Detection
+#### Identity & Access Management (6)
+- User Admin Account Changes - `/base/detections/binary/user_admin_account_change.py`
+- User Role Modifications - `/base/detections/binary/user_role_modified.py`
+- User Account Deletion - `/base/detections/binary/user_account_deleted.py`
+- Group Deletion - `/base/detections/binary/group_deleted.py`
+- Principal Removed from Group - `/base/detections/binary/principal_removed_from_group.py`
+- TruffleHog Scan Detected - `/base/detections/binary/trufflehog_scan_detected.py`
 
-### Data Exfiltration & Movement
-- Potential Data Movement via SQL Queries
-- Potential Data Movement via Workspace Downloads
-- Potential Data Movement via Explicit Credentials
+### Behavioral Detections (18 Total)
 
-### Configuration & Policy Monitoring
-- High Priority Configuration Changes
-- Workspace-Level Configuration Changes
-- Account-Level Configuration Changes
+**Purpose**: Pattern analysis and threat hunting
+**Time Window**: 30 days (configurable)
+**Use Case**: Investigation and anomaly detection
 
-### Secrets & Credential Management
-- Secret Scanning Activity Detection
-- Admin User Account Changes
+> **Note:** Events generated by these detections do not automatically indicate malicious activity. Many events occur during normal platform usage (e.g., token creation, MFA changes, group management). Always investigate results in the context of your organization's expected Databricks usage patterns.
 
-## Enhanced Detection Capabilities
+#### Authentication & Session Patterns (6)
+- Non-SSO Login Detection - `/base/detections/behavioral/non_sso_login_detected.py`
+- Session Hijacking (Multi-Device) - `/base/detections/behavioral/session_hijacking_multi_device.py`
+- Session Hijacking (Frequent Logins) - `/base/detections/behavioral/session_hijacking_frequent_logins.py`
+- Session Hijacking (High Session Count) - `/base/detections/behavioral/session_hijacking_session_count.py`
+- MFA Key Added - `/base/detections/behavioral/mfa_key_added.py`
+- MFA Key Deleted - `/base/detections/behavioral/mfa_key_deleted.py`
 
-The latest version includes advanced detection scenarios that go beyond basic audit monitoring:
+#### Token & Credential Management (4)
+- Access Token Created - `/base/detections/behavioral/access_token_created.py`
+- Access Token Deleted - `/base/detections/behavioral/access_token_deleted.py`
+- Token Scanning Activity - `/base/detections/behavioral/token_scanning_activity.py`
+- Secret Scanning Activity - `/base/detections/behavioral/secret_scanning_activity.py`
 
-- **Data Exfiltration Detection**: Identifies potential data movement attempts using SQL queries, workspace downloads, and explicit credentials
-- **Configuration Tampering**: Monitors for unauthorized changes to security-critical workspace and account configurations
-- **Secret Enumeration**: Detects reconnaissance activities targeting secret scopes and credential harvesting
-- **Admin Privilege Escalation**: Tracks administrative privilege changes and group membership modifications
-- **Comprehensive Coverage**: Integrates both `system.access.audit` and `system.query.history` tables for complete visibility
+#### Data Movement & Exfiltration (3)
+- Potential Data Movement via SQL Queries - `/base/detections/behavioral/potential_data_movement_sql_queries.py`
+- Potential Data Movement via Workspace Downloads - `/base/detections/behavioral/potential_data_movement_workspace_downloads.py`
+- Potential Data Movement via Explicit Credentials - `/base/detections/behavioral/potential_data_movement_explicit_creds.py`
+
+#### User & Group Management (5)
+- User Account Created - `/base/detections/behavioral/user_account_created.py`
+- User Password Changed - `/base/detections/behavioral/user_password_changed.py`
+- Group Created - `/base/detections/behavioral/group_created.py`
+- Principal Added to Group - `/base/detections/behavioral/principal_added_to_group.py`
+- Spike in Table Admin Activity - `/base/detections/behavioral/spike_in_table_admin_activity.py`
+
+---
+
+## Running Individual Detections
+
+Each detection notebook can be run independently for targeted analysis.
+
+### Binary Detection Example
+
+High-confidence immediate alert:
+
+```python
+# File: /base/detections/binary/sso_config_changed.py
+result = sso_config_changed(
+    earliest="2025-01-28T00:00:00",  # Last 24 hours
+    latest="2025-01-29T00:00:00"
+)
+display(result)
+```
+
+### Behavioral Detection Example
+
+Pattern analysis for threat hunting:
+
+```python
+# File: /base/detections/behavioral/potential_data_movement_sql_queries.py
+result = potential_data_movement_sql_queries(
+    earliest="2024-12-30T00:00:00",  # Last 30 days
+    latest="2025-01-29T00:00:00"
+)
+display(result)
+```
+
+---
 
 ## Installation
 
@@ -83,64 +228,60 @@ The latest version includes advanced detection scenarios that go beyond basic au
 - Appropriate permissions to create and run workflows
 
 ### Setup
-1. **Import the Repo**: Add the detection notebooks to your Databricks workspace. ([Documentation](https://docs.databricks.com/aws/en/repos/git-operations-with-repos#clone-a-repo-connected-to-a-remote-git-repository))
-2. **Configure Workflows**: Set up Databricks workflows for each detection
-3. **Adjust Parameters**: Modify start/end times and detection parameters as needed
-4. **Schedule Execution**: Configure trigger schedules matching your lookback periods
 
-### Configuration Notes
-- Detection searches rely on access to the audit table
-- Designed for batch mode execution using workflows
-- Ensure trigger schedules match lookback periods for full coverage
-- Avoid duplicate events by properly configuring execution intervals
+1. **Clone Repository**: Import to your Databricks workspace
+   ```
+   Repos → Add Repo → [GitHub URL]
+   ```
 
-## Usage
+2. **Review Detection Tracker**: See `/docs/detection_tracker.md` for complete detection inventory
 
-### Running Individual Detections
-Each detection notebook can be run independently with configurable time parameters:
+3. **Choose Your Approach**:
+   - **Recommended**: Start with threat model notebooks for comprehensive investigations
+   - **Alternative**: Run individual detections for targeted analysis
+   - **User-Specific**: Generate user behavior reports for specific users
 
-```python
-# Example: Run access token detection for last 24 hours
-result = access_token_created(
-    earliest="2025-01-01T00:00:00",
-    latest="2025-01-02T00:00:00"
-)
-```
-
-### Workflow Integration
-Detections are designed to be integrated into Databricks workflows for automated security monitoring:
-
-1. **Batch Processing**: Run detections on scheduled intervals
-2. **Alert Generation**: Output results to detection or alerts tables
-3. **Ad-hoc Analysis**: Generate dataframes for manual investigation
-
-### Output Formats
-- **DataFrame Output**: Structured data for further analysis
-- **Standardized Schema**: Consistent column naming across all detections
-- **Audit Trail**: Complete event details with timestamps and metadata
+---
 
 ## Architecture
 
 ### Core Components
-- **Detection Notebooks**: Individual security detection logic
-- **Common Library**: Shared utilities and enrichment functions
-- **Audit Table Integration**: Direct queries against `system.access.audit`
+- **Detection Notebooks** - Individual security detection logic
+- **Common Library** - Shared utilities and enrichment functions
+- **Audit Table Integration** - Direct queries against `system.access.audit`
+
+### Data Sources
+- `system.access.audit` - Primary audit log table
+- `system.query.history` - Query execution history (some detections)
 
 ### Dependencies
-- **PySpark**: Core data processing framework
-- **GeoIP2**: IP address geolocation capabilities
-- **NetAddr**: IP address manipulation utilities
+- **PySpark** - Core data processing framework
+- **PyYAML** - YAML parsing for detection metadata
+- **GeoIP2** - IP address geolocation capabilities (optional)
+- **NetAddr** - IP address manipulation utilities
 
-## How to get help
+---
+
+## Additional Resources
+
+- **[Databricks Security Best Practices](https://www.databricks.com/trust/security-features/security-best-practices)** - Official security guidance
+- **[Detection Tracker](/docs/detection_tracker.md)** - Complete detection inventory with current and planned detections
+- **[Security Analysis Tool (SAT)](https://docs.databricks.com/security/analysis-tool/index.html)** - Automated security configuration monitoring
+
+---
+
+## How to Get Help
 
 Databricks support doesn't cover this content. For questions or bugs, please open a GitHub issue and the team will help on a best effort basis.
 
+---
 
 ## License
 
-&copy; 2025 Databricks, Inc. All rights reserved. The source in this notebook is provided subject to the Databricks License [https://databricks.com/db-license-source]. All included or referenced third party libraries are subject to the licenses set forth below.
+© 2025 Databricks, Inc. All rights reserved. The source in this notebook is provided subject to the Databricks License [https://databricks.com/db-license-source]. All included or referenced third party libraries are subject to the licenses set forth below.
 
-| library                                | description             | license    | source                                              |
-|----------------------------------------|-------------------------|------------|-----------------------------------------------------|
-| geoip2                                 | IP address geolocation | Apache 2.0 | https://github.com/maxmind/GeoIP2-python          |
-| netaddr                                | IP address manipulation| BSD        | https://github.com/netaddr/netaddr                 |
+| library  | description             | license    | source                                              |
+|----------|-------------------------|------------|-----------------------------------------------------|
+| pyyaml   | YAML parsing           | MIT        | https://github.com/yaml/pyyaml                     |
+| geoip2   | IP address geolocation | Apache 2.0 | https://github.com/maxmind/GeoIP2-python           |
+| netaddr  | IP address manipulation| BSD        | https://github.com/netaddr/netaddr                 |

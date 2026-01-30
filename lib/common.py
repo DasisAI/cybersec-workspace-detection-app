@@ -319,16 +319,90 @@ class ASNEnrichment(MaxMindEnrichmentBase):
 
         return get_asn_data
 
-geo_enricher = GeoIPEnrichment(
-  '/Volumes/derek/sirens/sample_data/GeoLite2_City.mmdb', 
-  ip_column_name_or_expr='geo'
-)
-asn_enricher = ASNEnrichment(
-    '/Volumes/derek/sirens/sample_data/GeoLite2_ASN.mmdb',
-    ip_column_name_or_expr=None
-)
-geo_info = geo_enricher.create_pandas_udf_function()
-asn_info = asn_enricher.create_pandas_udf_function()
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## GeoIP Database Configuration (Optional)
+# MAGIC
+# MAGIC GeoIP enrichment is **disabled by default**. To enable it, configure a Volume path to MaxMind GeoLite2 databases:
+# MAGIC
+# MAGIC **Option 1: Spark Config (Recommended - Cluster-wide)**
+# MAGIC ```python
+# MAGIC spark.conf.set("spark.databricks.geoip.city.path", "/Volumes/catalog/schema/geoip/GeoLite2_City.mmdb")
+# MAGIC spark.conf.set("spark.databricks.geoip.asn.path", "/Volumes/catalog/schema/geoip/GeoLite2_ASN.mmdb")
+# MAGIC ```
+# MAGIC
+# MAGIC **Option 2: Widget (Per-notebook)**
+# MAGIC ```python
+# MAGIC dbutils.widgets.text("geoip_city_db_path", "/Volumes/catalog/schema/geoip/GeoLite2_City.mmdb")
+# MAGIC dbutils.widgets.text("geoip_asn_db_path", "/Volumes/catalog/schema/geoip/GeoLite2_ASN.mmdb")
+# MAGIC ```
+# MAGIC
+# MAGIC **Note:** Detections will run with or without GeoIP data. If not configured, geo enrichment is simply skipped.
+
+# COMMAND ----------
+
+def get_geoip_db_path(db_type='city'):
+    """
+    Get GeoIP database path from Volume configuration.
+
+    Args:
+        db_type: 'city' or 'asn'
+
+    Returns:
+        Path to database file in Volume, or None if not configured
+    """
+    widget_name = f"geoip_{db_type}_db_path"
+    config_key = f"spark.databricks.geoip.{db_type}.path"
+
+    # Try widget first
+    try:
+        widget_path = dbutils.widgets.get(widget_name)
+        if widget_path and widget_path.strip():
+            return widget_path.strip()
+    except:
+        pass
+
+    # Try Spark config
+    try:
+        config_path = spark.conf.get(config_key, None)
+        if config_path and config_path.strip():
+            return config_path.strip()
+    except:
+        pass
+
+    # Not configured - disabled by default
+    return None
+
+# Initialize GeoIP enrichers (optional - disabled by default)
+geo_enricher = None
+asn_enricher = None
+geo_info = None
+asn_info = None
+
+# Try to load GeoIP City database (optional)
+city_db_path = get_geoip_db_path('city')
+if city_db_path:
+    try:
+        geo_enricher = GeoIPEnrichment(city_db_path, ip_column_name_or_expr='geo')
+        geo_info = geo_enricher.create_pandas_udf_function()
+        print(f"✓ GeoIP City enrichment enabled: {city_db_path}")
+    except Exception as e:
+        print(f"⚠️ GeoIP City database found but failed to load: {e}")
+
+# Try to load GeoIP ASN database (optional)
+asn_db_path = get_geoip_db_path('asn')
+if asn_db_path:
+    try:
+        asn_enricher = ASNEnrichment(asn_db_path, ip_column_name_or_expr=None)
+        asn_info = asn_enricher.create_pandas_udf_function()
+        print(f"✓ GeoIP ASN enrichment enabled: {asn_db_path}")
+    except Exception as e:
+        print(f"⚠️ GeoIP ASN database found but failed to load: {e}")
+
+# If neither is configured, note that it's disabled (not an error)
+if not city_db_path and not asn_db_path:
+    print("ℹ️ GeoIP enrichment disabled (not configured)")
 
 # COMMAND ----------
 
@@ -471,16 +545,28 @@ def run_all_detections(
 
     try:
         w = WorkspaceClient()
-        notebooks = list(w.workspace.list(workspace_dir))
-    except Exception as e:
-        print(f"Failed to list: {e}")
-        return
 
-    notebook_paths = [
-        obj.path for obj in notebooks
-        if obj.path and (obj.path.endswith(".py") or obj.path.endswith(".ipynb") or
-                         obj.object_type and obj.object_type.name == "NOTEBOOK")
-    ]
+        # Scan both binary and behavioral subdirectories
+        notebook_paths = []
+        for subdir in ["binary", "behavioral"]:
+            subdir_path = f"{workspace_dir}/{subdir}"
+            try:
+                notebooks = list(w.workspace.list(subdir_path))
+                paths = [
+                    obj.path for obj in notebooks
+                    if obj.path and (obj.path.endswith(".py") or obj.path.endswith(".ipynb") or
+                                   obj.object_type and obj.object_type.name == "NOTEBOOK")
+                ]
+                notebook_paths.extend(paths)
+                print(f"  Found {len(paths)} detections in {subdir}/")
+            except Exception as e:
+                print(f"  Warning: Failed to scan {subdir_path}: {e}")
+
+        print(f"Total detections found: {len(notebook_paths)}")
+
+    except Exception as e:
+        print(f"Failed to scan detections: {e}")
+        return
 
     if notebook_filter:
         pattern = re.compile(notebook_filter)
