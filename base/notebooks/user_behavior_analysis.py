@@ -4,7 +4,7 @@
 # MAGIC
 # MAGIC This notebook generates a new investigative notebook focused on the behavior of 
 # MAGIC a specific user across multiple security detections. The new notebook will be
-# MAGIC stored in the same folder as this notebook, and can be run to analyze the user's behavior.
+# MAGIC stored in the "generated" folder and the full path to the notebook will be printed below in Cell 13 and can be run to analyze the user's behavior.
 # MAGIC
 # MAGIC **Parameters:**
 # MAGIC - `user_email`: Email address of the user to analyze
@@ -155,27 +155,30 @@ def discover_detections(base_path: str = None) -> Dict[str, Dict]:
 
     # Get the detections directory path
     if base_path is None:
-        detections_dir = os.path.join(cwd, "base", "detections")
+        detections_base = os.path.join(cwd, "base", "detections")
     else:
-        detections_dir = base_path
+        detections_base = base_path
 
-    print(f"Looking for detection files in {detections_dir}")
+    print(f"Looking for detection files in {detections_base}")
 
-    # Use workspace SDK to list files (works on both classic and serverless)
-    try:
-        detection_objects = list(w.workspace.list(detections_dir))
-        detection_files = [
-            obj.path for obj in detection_objects
-            if obj.path and (obj.path.endswith(".py") or
-                           (obj.object_type and obj.object_type.name == "NOTEBOOK"))
-        ]
-    except Exception as e:
-        print(f"Failed to list detections directory: {e}")
-        return detections
+    # Scan both binary and behavioral subdirectories
+    detection_files = []
+    for subdir in ["binary", "behavioral"]:
+        detections_dir = os.path.join(detections_base, subdir)
 
-    print(f"Discovering detections in {detections_dir}...")
-    print(f"Found {len(detection_files)} detection files")
-    print(f"detection_files: {detection_files}")
+        try:
+            detection_objects = list(w.workspace.list(detections_dir))
+            files = [
+                obj.path for obj in detection_objects
+                if obj.path and (obj.path.endswith(".py") or
+                               (obj.object_type and obj.object_type.name == "NOTEBOOK"))
+            ]
+            detection_files.extend(files)
+            print(f"  Found {len(files)} detection files in {subdir}/")
+        except Exception as e:
+            print(f"  Warning: Failed to scan {detections_dir}: {e}")
+
+    print(f"\nTotal detection files found: {len(detection_files)}")
 
     for file_path in detection_files:
         detection_info = parse_detection_file(file_path)
