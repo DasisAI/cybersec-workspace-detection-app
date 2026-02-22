@@ -99,6 +99,7 @@ def session_hijack_high_session_count(earliest: str=None, latest: str = None, th
 
     return df_suspicious_logins
 
+
 if __name__ == "__main__" or dbutils.widgets.get("earliest"):
     earliest, latest = get_time_range_from_widgets()
     display(session_hijack_high_session_count(

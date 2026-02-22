@@ -85,6 +85,7 @@ def user_account_created(earliest:str = None, latest: str = None):
     
     return df_filtered
 
+
 if __name__ == "__main__" or dbutils.widgets.get("earliest"):
     earliest, latest = get_time_range_from_widgets()
     display(user_account_created(

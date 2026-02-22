@@ -144,6 +144,7 @@ def spikes_in_admin_activity(earliest: str, latest: str, threshold: int = 0):
     return df_final
 
 
+
 if __name__ == "__main__" or dbutils.widgets.get("earliest"):
     earliest, latest = get_time_range_from_widgets()
     display(spikes_in_admin_activity(
