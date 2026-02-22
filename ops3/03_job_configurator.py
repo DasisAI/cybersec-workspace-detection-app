@@ -11,8 +11,17 @@ import pyspark.sql.functions as F
 
 w = WorkspaceClient()
 
-# 1. Define Bulk Update Widgets
-dbutils.widgets.dropdown("target_rule_group", "ALL", ["ALL", "behavioral", "binary"]) 
+# 1. Fetch distinct rule_groups from registry
+rg_df = spark.sql("""
+    SELECT DISTINCT rule_group 
+    FROM sandbox.audit_poc.rule_registry 
+    WHERE enabled = true AND rule_group IS NOT NULL
+""")
+rule_groups = [row["rule_group"] for row in rg_df.collect()]
+rule_groups.insert(0, "ALL") # 'ALL' 옵션을 가장 앞에 추가
+
+# 2. Define Bulk Update Widgets
+dbutils.widgets.dropdown("target_rule_group", "ALL", rule_groups) 
 dbutils.widgets.dropdown("action_type", "DRY_RUN", ["DRY_RUN", "UPDATE_PARAMS", "UPDATE_SCHEDULE", "PAUSE_JOBS", "UNPAUSE_JOBS"])
 
 # Parameters for UPDATE_PARAMS
