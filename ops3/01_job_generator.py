@@ -4,20 +4,17 @@
 # MAGIC 31개의 룰(Detection)에 대해 각각 고유한 개별 Databricks Job을 생성합니다. (1 Job = 1 Task 구조)
 
 # COMMAND ----------
-import requests
+# Databricks Python SDK를 사용하여 Job 생성
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.service import jobs
+from databricks.sdk.service import compute
 
-# Databricks API 통신을 위한 Host & Token 획득
-ctx = dbutils.notebook.entry_point.getDbutils().notebook().getContext()
-host = ctx.apiUrl().get()
-token = ctx.apiToken().get()
+# 노트북의 현재 컨텍스트를 사용하여 WorkspaceClient 자동 인증
+w = WorkspaceClient()
 
-headers = {
-    "Authorization": f"Bearer {token}",
-    "Content-Type": "application/json"
-}
-
-# TODO: 실제 노트북이 위치한 경로로 수정해야 합니다 (예: /Workspace/Repos/user/repo/ops3/02_single_runner)
-runner_notebook_path = "/Workspace/Repos/your_repo/ops3/02_single_runner"
+nb_path = dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()
+repo_ws_root = "/".join(nb_path.split("/")[:4])          # e.g., /Repos/<user>/<repo>
+runner_notebook_path = f"{repo_ws_root}/ops3/02_single_runner"
 
 # COMMAND ----------
 # 1. Active detection rule 조회 
@@ -41,51 +38,31 @@ for r in rules:
     
     # Define Job payload
     # 단일 Task로 구성되며, 파라미터(window_start_ts, window_end_ts, severity)를 정의합니다.
-    job_payload = {
-        "name": job_name,
-        "tasks": [
-            {
-                "task_key": f"run_{rule_id}",
-                "notebook_task": {
-                    "notebook_path": runner_notebook_path,
-                    "base_parameters": {
-                        "rule_id": rule_id,
-                        "window_start_ts": "", # 런타임에 주입받거나, 기본값을 설정할 수 있습니다.
-                        "window_end_ts": "",
-                        "severity": "medium"   # Default severity
-                    }
-                },
-                # For demo purposes, we define a small Serverless/Generic job cluster.
-                # 운영 환경에 맞춰 existing_cluster_id를 쓰거나 Worker Type을 변경하세요.
-                "job_cluster_key": "audit_job_cluster",
-            }
-        ],
-        "job_clusters": [
-            {
-                "job_cluster_key": "audit_job_cluster",
-                "new_cluster": {
-                    "spark_version": "13.3.x-scala2.12",
-                    "node_type_id": "i3.xlarge", 
-                    "num_workers": 1
-                }
-            }
-        ],
-        "tags": {
-            "rule_group": rule_group,
-            "pipeline": "audit_poc"
-        }
-    }
-    
-    resp = requests.post(
-        f"{host}/api/2.1/jobs/create",
-        headers=headers,
-        json=job_payload
-    )
-    
-    if resp.status_code == 200:
-        job_id = resp.json().get("job_id")
-        print(f"Created Job for [{rule_id}] - Job ID: {job_id}")
-    else:
-        print(f"Failed to create job for [{rule_id}]: {resp.text}")
+    try:
+        created_job = w.jobs.create(
+            name=job_name,
+            tags={
+                "rule_group": rule_group,
+                "pipeline": "audit_poc"
+            },
+            # Serverless Compute를 사용하기 위해 job_clusters 지정 및 task 내 클러스터 할당을 생략합니다.
+            tasks=[
+                jobs.Task(
+                    task_key=f"run_{rule_id}",
+                    notebook_task=jobs.NotebookTask(
+                        notebook_path=runner_notebook_path,
+                        base_parameters={
+                            "rule_id": rule_id,
+                            "window_start_ts": "", # 런타임에 주입받거나, 기본값을 설정할 수 있습니다.
+                            "window_end_ts": "",
+                            "severity": "medium"   # Default severity
+                        }
+                    )
+                )
+            ]
+        )
+        print(f"Created Job for [{rule_id}] - Job ID: {created_job.job_id}")
+    except Exception as e:
+        print(f"Failed to create job for [{rule_id}]: {e}")
 
 print("Job generation completed.")
