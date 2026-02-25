@@ -92,23 +92,6 @@ def finalize_run(status: str, row_count: int = 0, error_msg: str = None):
     except Exception as finalize_err:
         print(f"Failed during finalize_run: {finalize_err}")
 
-# COMMAND ----------
-# 2. Add dependencies and Materialized Py root path to sys.path
-# 노트북의 Base Root를 맞추기 위한 작업
-common = dbutils.import_notebook("lib.common")
-builtins.detect = common.detect
-builtins.Output = common.Output
-builtins.dbutils = dbutils
-builtins.spark = spark
-builtins.F = F
-
-nb_path = dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()
-repo_ws_root = "/".join(nb_path.split("/")[:4])          
-repo_fs_root = f"/Workspace{repo_ws_root}"               
-materialized_fs_root = f"{repo_fs_root}/materialized_py" 
-
-if materialized_fs_root not in sys.path:
-    sys.path.insert(0, materialized_fs_root)
 
 # COMMAND ----------
 # 3. Retrieve rule logic metadata (notebook path & callable name)
@@ -144,7 +127,6 @@ try:
         finalize_run("SUCCESS", row_count)
         dbutils.notebook.exit("SUCCESS")
 
-    # COMMAND ----------
     # 5. Build Standardized Payload Fields & Dedupe Key
 
     # Payload 컬럼만을 조합하기 위해 제외할 메타데이터 컬럼 목록
@@ -175,7 +157,6 @@ try:
         )
     )
 
-    # COMMAND ----------
     # 6. MERGE into Individual Table (`findings_{id}`)
     individual_tbl = f"sandbox.audit_poc.findings_{rule_id}"
 
@@ -195,7 +176,6 @@ try:
     )
     print(f"MERGE into Individual Table [{individual_tbl}] - DONE")
 
-    # COMMAND ----------
     # 7. Build Unified Format & MERGE into Unified Table (`findings_unified`)
 
     UNIFIED_TBL = "sandbox.audit_poc.findings_unified"
