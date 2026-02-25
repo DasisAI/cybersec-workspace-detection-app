@@ -187,6 +187,16 @@ display(spark.sql("SELECT rule_id, rule_group, module_path, callable_name, lookb
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service import jobs
 from databricks.sdk.service import compute
+from datetime import datetime
+
+# 위젯으로 keep_history 옵션 받기 (디폴트는 false)
+try:
+    dbutils.widgets.text("keep_history", "false", "Keep previous jobs (true/false)")
+    keep_history_str = dbutils.widgets.get("keep_history").strip().lower()
+except Exception:
+    keep_history_str = "false"
+
+keep_history = keep_history_str in ["true", "1", "t", "yes", "y"]
 
 # 노트북의 현재 컨텍스트를 사용하여 WorkspaceClient 자동 인증
 w = WorkspaceClient()
@@ -202,19 +212,33 @@ rules_df = spark.sql("""
 rules = rules_df.collect()
 
 print(f"Loaded {len(rules)} active rules from registry.")
+print(f"Option keep_history: {keep_history}")
 
 # COMMAND ----------
 # 2. Iterate through rules and create Jobs
+current_dt_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+
 for r in rules:
     rule_id = r["rule_id"]
     rule_group = r["rule_group"]
     
     # Prefix format you can customize
-    job_name = f"Audit_Detection_{rule_id}"
+    base_job_name = f"Audit_Detection_{rule_id}"
+    
+    if keep_history:
+        job_name = f"{base_job_name}_{current_dt_str}"
+    else:
+        job_name = base_job_name
     
     # Define Job payload
     # 단일 Task로 구성되며, 파라미터(window_start_ts, window_end_ts, severity)를 정의합니다.
     try:
+        if not keep_history:
+            # 기존에 생성된 동일한 이름의 Job을 찾아 삭제하여 replace 효과를 냄
+            for existing_job in w.jobs.list(name=job_name):
+                print(f"Deleting existing job: {existing_job.job_id} ({job_name})")
+                w.jobs.delete(job_id=existing_job.job_id)
+
         created_job = w.jobs.create(
             name=job_name,
             tags={
