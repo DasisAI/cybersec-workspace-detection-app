@@ -32,6 +32,10 @@ severity = dbutils.widgets.get("severity").strip()
 
 if not rule_id:
     raise ValueError("rule_id is required parameter")
+if not window_start_ts:
+    raise ValueError("window_start_ts is required parameter")
+if not window_end_ts:
+    raise ValueError("window_end_ts is required parameter")
 
 run_id = f"{rule_id}_{int(time.time())}"
 print(f"Starting run for rule_id: {rule_id} | Window: {window_start_ts} ~ {window_end_ts} | Severity: {severity}")

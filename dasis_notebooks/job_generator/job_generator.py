@@ -191,7 +191,7 @@ from datetime import datetime
 
 # 위젯으로 keep_history 옵션 받기 (디폴트는 false)
 try:
-    dbutils.widgets.text("keep_history", "false", "Keep previous jobs (true/false)")
+    dbutils.widgets.dropdown("keep_history", "false", ["false", "true"], "Keep previous jobs")
     keep_history_str = dbutils.widgets.get("keep_history").strip().lower()
 except Exception:
     keep_history_str = "false"

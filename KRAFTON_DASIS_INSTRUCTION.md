@@ -27,6 +27,9 @@
 1. **`00_materialize_rules_as_py`**: `base/detections/` 하위 코드를 Databricks 환경에서 안전하게 Import 할 수 있도록 순수 Python 파일(`.py`) 형태로 컴파일 및 `materialized_py/` 폴더에 변환(Materialize)합니다.
 2. **`01_register_rules`**: Materialize된 룰들을 읽어 `rule_registry` DB에 등록 혹은 상태를 갱신하고, 최초 등록 규칙의 경우 `rule_checkpoint` 초기 상태 row를 구성합니다.
 3. **`02_job_generator`**: 레지스트리에 등록된 활성화 룰(`enabled=true`)들을 기반으로, 각각 1개의 Databricks Job(예: `Audit_Detection_{rule_id}`)을 발급 및 생성합니다.
+   - **`keep_history` (드롭다운 위젯 옵션)**: Job 생성 시 상단에서 값을 선택할 수 있습니다.
+     - `false` (디폴트): 새로 Job을 생성할 때 동일한 이름의 기존 Job들을 찾아 삭제함으로써 중복 없이 Job을 업데이트(Replace)합니다.
+     - `true`: 기존 Job들을 지우지 않고 새 Job 이름 뒤에 날짜와 시간(예: `_20260226_123456`)을 붙여 이전 버전들을 보존합니다.
 
 ### 2-2. `runners/single_runner.py` (실제 규칙 실행기)
 앞서 생성된 개별 Databricks Job이 호출하는 **단일 실행기(Single Runner)** 입니다. 
