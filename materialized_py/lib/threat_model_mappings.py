@@ -141,3 +141,4 @@ THREAT_MODEL_MAPPINGS = {
         "behavioral/access_token_created"
     ]
 }
+

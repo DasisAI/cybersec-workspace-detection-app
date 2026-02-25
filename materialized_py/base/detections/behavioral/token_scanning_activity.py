@@ -136,10 +136,11 @@ def token_scanning_activity(earliest: str, latest: str, threshold: int = 0):
     return df_final
 
 
-if __name__ == "__main__" or dbutils.widgets.get("earliest"):
+if __name__ == "__main__" or dbutils.widgets.get("window_start_ts"):
     earliest, latest = get_time_range_from_widgets()
     display(token_scanning_activity(
-        earliest=dbutils.widgets.get("earliest"),
-        latest=dbutils.widgets.get("latest"),
+        earliest=dbutils.widgets.get("window_start_ts"),
+        latest=dbutils.widgets.get("window_end_ts"),
         threshold=0.5
     ))
+

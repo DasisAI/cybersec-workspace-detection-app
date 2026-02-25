@@ -97,9 +97,10 @@ def configuration_changes_workspace_level(earliest: str = None, latest: str = No
     return df_filtered
 
 
-if __name__ == "__main__" or dbutils.widgets.get("earliest"):
+if __name__ == "__main__" or dbutils.widgets.get("window_start_ts"):
     earliest, latest = get_time_range_from_widgets()
     display(configuration_changes_workspace_level(
-        earliest=dbutils.widgets.get("earliest"),
-        latest=dbutils.widgets.get("latest")
+        earliest=dbutils.widgets.get("window_start_ts"),
+        latest=dbutils.widgets.get("window_end_ts")
     ))
+

@@ -266,3 +266,157 @@ for r in rules:
         print(f"Failed to create job for [{rule_id}]: {e}")
 
 print("Job generation completed.")
+
+# COMMAND ----------
+# MAGIC %md
+# MAGIC # 03_dashboard_generator
+# MAGIC 등록된 Detection 룰 탐지 결과(`sandbox.audit_poc.findings_unified` 등)를 추적하기 위한 모니터링 대시보드를 프로그래밍 방식으로 생성 또는 업데이트합니다.
+
+# COMMAND ----------
+from databricks.sdk import WorkspaceClient
+
+try:
+    dbutils.widgets.dropdown("create_dashboard", "false", ["false", "true"], "Create/Update monitoring dashboard")
+    create_dashboard_str = dbutils.widgets.get("create_dashboard").strip().lower()
+except Exception:
+    create_dashboard_str = "false"
+
+create_dashboard = create_dashboard_str in ["true", "1", "t", "yes", "y"]
+
+if create_dashboard:
+    w = WorkspaceClient()
+    dashboard_name = "Audit_POC_Detection_Monitoring_Dashboard"
+    
+    print(f"Attempting to create or update dashboard: {dashboard_name}")
+    
+    try:
+        import json
+        import uuid
+        from collections import defaultdict
+
+        dashboard_id = "01f10c1584ee1ee88af7128d04ab5fd2"
+        existing_dash = w.lakeview.get(dashboard_id)
+        dash_data = json.loads(existing_dash.serialized_dashboard)
+        
+        # Ensure base structure
+        if "pages" not in dash_data: dash_data["pages"] = []
+        if "datasets" not in dash_data: dash_data["datasets"] = []
+        
+        # Find the key used for widgets (can be widgets, layouts, components)
+        widget_list_key = "widgets"
+        for k in ["widgets", "layouts", "components"]:
+            if k in dash_data:
+                widget_list_key = k
+                break
+        if widget_list_key not in dash_data:
+            dash_data[widget_list_key] = []
+            
+        print(f"Found {len(dash_data['pages'])} pages and {len(dash_data['datasets'])} datasets.")
+
+        # Get active rules
+        rules_df = spark.sql("SELECT rule_id, rule_group FROM sandbox.audit_poc.rule_registry")
+        rules_list = rules_df.collect()
+        
+        rules_by_group = defaultdict(list)
+        for r in rules_list:
+            rules_by_group[r["rule_group"]].append(r["rule_id"])
+            
+        existing_datasets = {d.get("displayName"): d for d in dash_data["datasets"]}
+        existing_pages = {p.get("displayName"): p for p in dash_data["pages"]}
+        
+        added_datasets = 0
+        added_widgets = 0
+        
+        for g_name, r_ids in rules_by_group.items():
+            page_obj = existing_pages.get(g_name)
+            if not page_obj:
+                page_name = str(uuid.uuid4())
+                page_obj = {"name": page_name, "displayName": g_name}
+                dash_data["pages"].append(page_obj)
+                existing_pages[g_name] = page_obj
+            else:
+                page_name = page_obj.get("name")
+                
+            page_widgets = [pw for pw in dash_data[widget_list_key] if pw.get("page") == page_name or pw.get("pageName") == page_name]
+            
+            # Find max Y to place new widgets at the bottom
+            max_y = 0
+            for pw in page_widgets:
+                d = pw.get("display", {})
+                bottom = d.get("y", 0) + d.get("height", 0)
+                if bottom > max_y: max_y = bottom
+                
+            for rid in r_ids:
+                table_name = f"sandbox.audit_poc.findings_{rid}"
+                dataset_obj = existing_datasets.get(table_name)
+                
+                if not dataset_obj:
+                    dataset_name = str(uuid.uuid4())
+                    dataset_obj = {
+                        "name": dataset_name,
+                        "displayName": table_name,
+                        "query": f"SELECT * FROM {table_name} ORDER BY event_ts DESC LIMIT 1000"
+                    }
+                    dash_data["datasets"].append(dataset_obj)
+                    existing_datasets[table_name] = dataset_obj
+                    added_datasets += 1
+                else:
+                    dataset_name = dataset_obj.get("name")
+                    
+                # Check if table widget exists
+                has_widget = False
+                for pw in page_widgets:
+                    spec = pw.get("spec", {})
+                    # Lakeview JSON schemas variations
+                    if isinstance(spec, dict) and spec.get("dataset") == dataset_name:
+                        has_widget = True
+                        break
+                    if pw.get("dataset") == dataset_name or pw.get("title") == table_name:
+                        has_widget = True
+                        break
+                        
+                if not has_widget:
+                    wid = str(uuid.uuid4())
+                    new_widget = {
+                        "name": wid,
+                        "page": page_name,
+                        "pageName": page_name,
+                        "title": table_name,
+                        "display": {
+                            "x": 0,
+                            "y": max_y,
+                            "width": 12,
+                            "height": 9
+                        },
+                        "component": {
+                            "type": "table",
+                            "spec": {
+                                "dataset": dataset_name
+                            }
+                        },
+                        "spec": {
+                            "type": "table",
+                            "dataset": dataset_name
+                        },
+                        "dataset": dataset_name
+                    }
+                    dash_data[widget_list_key].append(new_widget)
+                    page_widgets.append(new_widget)
+                    max_y += 9
+                    added_widgets += 1
+
+        if added_datasets > 0 or added_widgets > 0:
+            updated_json = json.dumps(dash_data)
+            w.lakeview.update(
+                dashboard_id=dashboard_id,
+                display_name=existing_dash.display_name,
+                serialized_dashboard=updated_json
+            )
+            print(f"Dashboard updated: added {added_datasets} datasets and {added_widgets} widgets.")
+        else:
+            print("Dashboard is already up-to-date. No new tables to add.")
+            
+    except Exception as e:
+        print(f"Failed to create or update dashboard: {e}")
+else:
+    print("Skipping dashboard generation (create_dashboard=false).")

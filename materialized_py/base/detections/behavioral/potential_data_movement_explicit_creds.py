@@ -95,9 +95,10 @@ def potential_data_movement_explicit_creds(earliest: str = None, latest: str = N
     return df_filtered
 
 
-if __name__ == "__main__" or dbutils.widgets.get("earliest"):
+if __name__ == "__main__" or dbutils.widgets.get("window_start_ts"):
     earliest, latest = get_time_range_from_widgets()
     display(potential_data_movement_explicit_creds(
-        earliest=dbutils.widgets.get("earliest"),
-        latest=dbutils.widgets.get("latest")
+        earliest=dbutils.widgets.get("window_start_ts"),
+        latest=dbutils.widgets.get("window_end_ts")
     ))
+

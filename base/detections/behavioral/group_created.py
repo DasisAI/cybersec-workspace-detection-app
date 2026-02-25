@@ -85,9 +85,9 @@ def group_created(earliest:str = None, latest: str = None):
 
 # COMMAND ----------
 
-if __name__ == "__main__" or dbutils.widgets.get("earliest"):
+if __name__ == "__main__" or dbutils.widgets.get("window_start_ts"):
     earliest, latest = get_time_range_from_widgets()
     display(group_created(
-        earliest=dbutils.widgets.get("earliest"),
-        latest=dbutils.widgets.get("latest")
+        earliest=dbutils.widgets.get("window_start_ts"),
+        latest=dbutils.widgets.get("window_end_ts")
     ))

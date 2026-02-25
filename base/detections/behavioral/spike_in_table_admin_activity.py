@@ -71,8 +71,8 @@
 # MAGIC
 # MAGIC Normalizing the results as a fraction from the average can be a better way to look for spikes,
 # MAGIC rather than the raw aggregate numbers. Raw numbers can cause a loud service account to
-# MAGIC drown out the enumeration of an attackerâ€™s activity. The below aggregation normalizes the daily
-# MAGIC unique numbers as a percentage of that entryâ€™s average.
+# MAGIC drown out the enumeration of an attacker?™s activity. The below aggregation normalizes the daily
+# MAGIC unique numbers as a percentage of that entry?™s average.
 
 # COMMAND ----------
 
@@ -150,10 +150,10 @@ def spikes_in_admin_activity(earliest: str, latest: str, threshold: int = 0):
 
 # COMMAND ----------
 
-if __name__ == "__main__" or dbutils.widgets.get("earliest"):
+if __name__ == "__main__" or dbutils.widgets.get("window_start_ts"):
     earliest, latest = get_time_range_from_widgets()
     display(spikes_in_admin_activity(
-        earliest=dbutils.widgets.get("earliest"),
-        latest=dbutils.widgets.get("latest"),
+        earliest=dbutils.widgets.get("window_start_ts"),
+        latest=dbutils.widgets.get("window_end_ts"),
         threshold=1.5
     ))

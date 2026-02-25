@@ -136,9 +136,9 @@ def configuration_changes_high_priority(earliest:str = None, latest: str = None)
 
 # COMMAND ----------
 
-if __name__ == "__main__" or dbutils.widgets.get("earliest"):
+if __name__ == "__main__" or dbutils.widgets.get("window_start_ts"):
     earliest, latest = get_time_range_from_widgets()
     display(configuration_changes_high_priority(
-        earliest=dbutils.widgets.get("earliest"),
-        latest=dbutils.widgets.get("latest")
+        earliest=dbutils.widgets.get("window_start_ts"),
+        latest=dbutils.widgets.get("window_end_ts")
     ))

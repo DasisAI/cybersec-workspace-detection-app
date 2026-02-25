@@ -205,9 +205,9 @@ def discover_detections(base_path: str = None, detection_list: List[str] = None,
             if detection_info:
                 detection_name = detection_info["file_name"]
                 detections[detection_name] = detection_info
-                print(f"  ✓ Loaded: {detection_name}")
+                print(f"  ??Loaded: {detection_name}")
             else:
-                print(f"  ✗ Failed to load: {detection_path}")
+                print(f"  ??Failed to load: {detection_path}")
 
     else:
         # Scan directories for all detections
@@ -238,7 +238,7 @@ def discover_detections(base_path: str = None, detection_list: List[str] = None,
                     if detection_info:
                         detection_name = detection_info["file_name"]
                         detections[detection_name] = detection_info
-                        print(f"  ✓ Loaded: {detection_name}")
+                        print(f"  ??Loaded: {detection_name}")
 
             except Exception as e:
                 print(f"Warning: Failed to scan {detections_dir}: {e}")
@@ -324,15 +324,15 @@ try:
 
     # Check if we have results
     if result_df is not None and result_df.count() > 0:
-        print(f"✓ Found {{result_df.count()}} events")
+        print(f"??Found {{result_df.count()}} events")
         display(result_df)
         detection_triggered = True
     else:
-        print(f"○ No events in the specified time range")
+        print(f"??No events in the specified time range")
         detection_triggered = False
 
 except Exception as e:
-    print(f"✗ Error running detection: {{e}}")
+    print(f"??Error running detection: {{e}}")
     detection_triggered = False
 """
 
@@ -582,13 +582,13 @@ print(f"Total Findings: {{summary_stats['findings']}}")
 print("-" * 80)
 
 if summary_stats["findings"] == 0:
-    print("✓ RESULT: No suspicious activity detected for this threat model")
+    print("??RESULT: No suspicious activity detected for this threat model")
 else:
-    print(f"⚠️ RESULT: {{summary_stats['findings']}} detection(s) triggered - review required")
+    print(f"?�️ RESULT: {{summary_stats['findings']}} detection(s) triggered - review required")
     print()
     print("Detections that triggered:")
     for detection in summary_stats["detections_triggered"]:
-        print(f"  • {{detection}}")
+        print(f"  ??{{detection}}")
 
 {command}
 
@@ -598,3 +598,4 @@ else:
 """
 
     return notebook_content
+

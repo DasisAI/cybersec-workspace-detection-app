@@ -382,9 +382,9 @@ if city_db_path:
     try:
         geo_enricher = GeoIPEnrichment(city_db_path, ip_column_name_or_expr='geo')
         geo_info = geo_enricher.create_pandas_udf_function()
-        print(f"✓ GeoIP City enrichment enabled: {city_db_path}")
+        print(f"??GeoIP City enrichment enabled: {city_db_path}")
     except Exception as e:
-        print(f"⚠️ GeoIP City database found but failed to load: {e}")
+        print(f"?�️ GeoIP City database found but failed to load: {e}")
 
 # Try to load GeoIP ASN database (optional)
 asn_db_path = get_geoip_db_path('asn')
@@ -392,13 +392,13 @@ if asn_db_path:
     try:
         asn_enricher = ASNEnrichment(asn_db_path, ip_column_name_or_expr=None)
         asn_info = asn_enricher.create_pandas_udf_function()
-        print(f"✓ GeoIP ASN enrichment enabled: {asn_db_path}")
+        print(f"??GeoIP ASN enrichment enabled: {asn_db_path}")
     except Exception as e:
-        print(f"⚠️ GeoIP ASN database found but failed to load: {e}")
+        print(f"?�️ GeoIP ASN database found but failed to load: {e}")
 
 # If neither is configured, note that it's disabled (not an error)
 if not city_db_path and not asn_db_path:
-    print("ℹ️ GeoIP enrichment disabled (not configured)")
+    print("?�️ GeoIP enrichment disabled (not configured)")
 
 
 import functools
@@ -494,10 +494,10 @@ def get_time_range_from_widgets(default_hours: int = 24):
     dbutils.widgets.text("earliest", default_earliest)
     dbutils.widgets.text("latest", default_latest)
 
-    earliest = dbutils.widgets.get("earliest")
-    latest = dbutils.widgets.get("latest")
+    earliest = dbutils.widgets.get("window_start_ts")
+    latest = dbutils.widgets.get("window_end_ts")
 
-    print(f"✅ Using time range: earliest = {earliest}, latest = {latest}")
+    print(f"??Using time range: earliest = {earliest}, latest = {latest}")
     return earliest, latest
 
 def get_notebook_path():
@@ -579,3 +579,4 @@ def run_all_detections(
 
         except Exception as e:
             print(f"Failed to run {run_path}: {e}")
+

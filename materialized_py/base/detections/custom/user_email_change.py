@@ -83,8 +83,8 @@ def user_email_changed(earliest: str = None, latest: str = None):
 
 def _widgets_defined() -> bool:
     try:
-        dbutils.widgets.get("earliest")
-        dbutils.widgets.get("latest")
+        dbutils.widgets.get("window_start_ts")
+        dbutils.widgets.get("window_end_ts")
         return True
     except Exception:
         return False
@@ -95,6 +95,7 @@ if __name__ == "__main__":
         dbutils.widgets.text("latest", "")
     earliest, latest = get_time_range_from_widgets()
     display(user_email_changed(
-        earliest=dbutils.widgets.get("earliest") or str(earliest),
-        latest=dbutils.widgets.get("latest") or str(latest),
+        earliest=dbutils.widgets.get("window_start_ts") or str(earliest),
+        latest=dbutils.widgets.get("window_end_ts") or str(latest),
     ))
+
