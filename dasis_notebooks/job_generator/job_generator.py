@@ -8,16 +8,21 @@
 # 00_materialize_rules_as_py (generic: recursive)
 import os
 
-# repo root
-nb_path = (
-    dbutils.notebook.entry_point.getDbutils()
-    .notebook()
-    .getContext()
-    .notebookPath()
-    .get()
-)
-repo_ws_root = "/".join(nb_path.split("/")[:4])   # /Repos/<user>/<repo>
-repo_fs_root = f"/Workspace{repo_ws_root}"
+
+def resolve_repo_paths():
+    nb_path = (
+        dbutils.notebook.entry_point.getDbutils()
+        .notebook()
+        .getContext()
+        .notebookPath()
+        .get()
+    )
+    repo_ws_root = "/".join(nb_path.split("/")[:4])   # /Repos/<user>/<repo>
+    repo_fs_root = f"/Workspace{repo_ws_root}"
+    return repo_ws_root, repo_fs_root
+
+
+repo_ws_root, repo_fs_root = resolve_repo_paths()
 
 out_fs_root = f"{repo_fs_root}/materialized_py"
 out_ws_root = f"{repo_ws_root}/materialized_py"
@@ -119,18 +124,6 @@ print("OK: materialized to", out_ws_root)
 # COMMAND ----------
 
 import re
-from datetime import datetime, timezone
-
-# repo root
-nb_path = (
-    dbutils.notebook.entry_point.getDbutils()
-    .notebook()
-    .getContext()
-    .notebookPath()
-    .get()
-)
-repo_ws_root = "/".join(nb_path.split("/")[:4])   # /Repos/<user>/<repo>
-repo_fs_root = f"/Workspace{repo_ws_root}"
 
 def extract_callable_name(py_file_text: str, fallback: str) -> str:
     """
@@ -225,7 +218,6 @@ display(spark.sql("SELECT rule_id, rule_group, module_path, callable_name, enabl
 # Databricks Python SDK를 사용하여 Job 생성
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service import jobs
-from databricks.sdk.service import compute
 from datetime import datetime
 
 # 위젯으로 keep_history 옵션 받기 (디폴트는 false)
