@@ -146,7 +146,7 @@ meta = (
 if not meta:
     err_msg = f"Rule [{rule_id}] disabled or not found in registry."
     finalize_run("FAILED", 0, err_msg)
-    dbutils.notebook.exit(err_msg)
+    raise ValueError(err_msg)
 
 module_path = meta[0]["module_path"]
 callable_name = meta[0]["callable_name"]
@@ -173,10 +173,6 @@ try:
     row_count = df.count()
 
     print(f"Rule [{rule_id}] returned {row_count} findings.")
-
-    if row_count == 0:
-        finalize_run("SUCCESS", row_count)
-        dbutils.notebook.exit("SUCCESS")
 
     # 5. Build Standardized Payload Fields & Dedupe Key
 
@@ -312,20 +308,10 @@ try:
     )
 
     print(f"MERGE into Unified Table [{UNIFIED_TBL}] - DONE")
-    
+
     finalize_run("SUCCESS", row_count)
-    dbutils.notebook.exit("SUCCESS")
 
 except Exception as e:
-    # dbutils.notebook.exit("SUCCESS") may surface as control-flow exception text
-    # such as "Notebook exited: SUCCESS" or simply "SUCCESS" depending on runtime.
-    exit_msg = str(e).strip()
-    if (
-        exit_msg in {"SUCCESS", "SUCCESS_EMPTY", "Notebook exited: SUCCESS", "Notebook exited: SUCCESS_EMPTY"}
-        or "Notebook exited: SUCCESS" in exit_msg
-    ):
-        raise
-
     err_str = str(e) + "\n" + traceback.format_exc()
     # Safely truncate error message
     err_str = err_str[:10000]
