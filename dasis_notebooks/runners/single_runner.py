@@ -253,7 +253,13 @@ try:
     """)
 
     def _resolve_event_ts_col(df_frame):
-        for c in ["EVENT_TIME", "event_time", "event_ts", "EVENT_TS", "timestamp", "time"]:
+        # Prefer event timestamps emitted by detection logic.
+        # Many rules emit EVENT_DATE (already normalized), so include it before fallback.
+        for c in [
+            "EVENT_TIME", "event_time", "event_ts", "EVENT_TS",
+            "EVENT_DATE", "event_date",
+            "timestamp", "time"
+        ]:
             if c in df_frame.columns:
                 return F.col(c).cast("timestamp")
         return F.current_timestamp()
