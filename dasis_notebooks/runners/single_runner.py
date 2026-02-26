@@ -125,7 +125,17 @@ row_count = 0
 try:
     import re
     # Remove file extension for notebook.run
-    run_path = re.sub(r'\.(py|ipynb)$', '', module_path)
+    base_run_path = re.sub(r'\.(py|ipynb)$', '', module_path)
+    # Replace dots with slashes
+    base_run_path = base_run_path.replace('.', '/')
+    
+    # Check if module_path is already absolute (like /Workspace/... or /Users/...), otherwise prepend ../../base/
+    if base_run_path.startswith('/'):
+        run_path = base_run_path
+    else:
+        # relative path from dasis_notebooks/runners
+        run_path = f"../../{base_run_path}"
+        
     
     print(f"Executing notebook: {run_path} via dbutils.notebook.run")
     # AS-IS runner와 동일하게 window range 및 hook trigger용 parameter 전달
@@ -144,9 +154,9 @@ try:
         
     print(f"Rule [{rule_id}] returned {row_count} findings.")
 
-    if row_count == 0:
-        finalize_run("SUCCESS", row_count)
-        dbutils.notebook.exit("SUCCESS")
+    # if df is None:
+    #     finalize_run("SUCCESS", row_count)
+    #     dbutils.notebook.exit("SUCCESS")
 
     # 5. Build Standardized Payload Fields & Dedupe Key
 
