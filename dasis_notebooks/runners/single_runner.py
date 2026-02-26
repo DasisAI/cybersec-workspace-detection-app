@@ -119,9 +119,11 @@ def finalize_run(status: str, row_count: int = 0, error_msg: str = None):
 common = dbutils.import_notebook("lib.common")
 builtins.detect = common.detect
 builtins.Output = common.Output
-# Detection 노트북이 하단 테스트 블록에서 직접 호출하는 헬퍼도 주입
+# Detection 노트북이 common에서 직접 참조하는 헬퍼/객체 주입
 if hasattr(common, "get_time_range_from_widgets"):
     builtins.get_time_range_from_widgets = common.get_time_range_from_widgets
+if hasattr(common, "geo_info"):
+    builtins.geo_info = common.geo_info
 builtins.dbutils = dbutils
 builtins.spark = spark
 builtins.F = F
@@ -221,6 +223,27 @@ try:
             spark.sql(f"ALTER TABLE {table_name} ADD COLUMNS ({', '.join(missing_defs)})")
             print(f"Schema evolved for {table_name}: {', '.join(missing_defs)}")
 
+    def _is_delta_concurrency_error(exc: Exception) -> bool:
+        msg = str(exc)
+        return (
+            "DELTA_CONCURRENT_APPEND" in msg
+            or "ConcurrentAppendException" in msg
+            or "conflicts with another concurrent update" in msg
+        )
+
+    def _run_with_retry(label: str, fn, max_retries: int = 3, base_sleep_sec: int = 2):
+        attempt = 0
+        while True:
+            try:
+                return fn()
+            except Exception as merge_err:
+                if attempt >= max_retries or not _is_delta_concurrency_error(merge_err):
+                    raise
+                wait_sec = base_sleep_sec * (2 ** attempt)
+                print(f"{label} concurrency conflict (attempt {attempt + 1}/{max_retries}). Retrying in {wait_sec}s...")
+                time.sleep(wait_sec)
+                attempt += 1
+
     if not spark.catalog.tableExists(individual_tbl):
         # 첫 생성 시 source schema를 그대로 사용해 MERGE 키 누락을 방지
         out_df.limit(0).write.format("delta").mode("overwrite").saveAsTable(individual_tbl)
@@ -230,15 +253,18 @@ try:
     individual_target = DeltaTable.forName(spark, individual_tbl)
 
     # 중복된 dedupe_key가 있을 경우 추가 Insert 방어
-    (
-        individual_target.alias("t")
-        .merge(
-            out_df.alias("s"),
-            "t.dedupe_key = s.dedupe_key AND t.rule_id = s.rule_id"
+    def _merge_individual():
+        (
+            individual_target.alias("t")
+            .merge(
+                out_df.alias("s"),
+                "t.dedupe_key = s.dedupe_key AND t.rule_id = s.rule_id"
+            )
+            .whenNotMatchedInsertAll()
+            .execute()
         )
-        .whenNotMatchedInsertAll()
-        .execute()
-    )
+
+    _run_with_retry(f"MERGE individual [{individual_tbl}]", _merge_individual)
     print(f"MERGE into Individual Table [{individual_tbl}] - DONE")
 
     # 7. Build Unified Format & MERGE into Unified Table (`findings_unified`)
@@ -300,15 +326,18 @@ try:
     unified_target = DeltaTable.forName(spark, UNIFIED_TBL)
 
     # 중복된 dedupe_key가 있을 경우 추가 Insert 방어
-    (
-        unified_target.alias("t")
-        .merge(
-            unified_df.alias("s"),
-            "t.dedupe_key = s.dedupe_key AND t.rule_id = s.rule_id"
+    def _merge_unified():
+        (
+            unified_target.alias("t")
+            .merge(
+                unified_df.alias("s"),
+                "t.dedupe_key = s.dedupe_key AND t.rule_id = s.rule_id"
+            )
+            .whenNotMatchedInsertAll()
+            .execute()
         )
-        .whenNotMatchedInsertAll()
-        .execute()
-    )
+
+    _run_with_retry(f"MERGE unified [{UNIFIED_TBL}]", _merge_unified)
 
     print(f"MERGE into Unified Table [{UNIFIED_TBL}] - DONE")
 
