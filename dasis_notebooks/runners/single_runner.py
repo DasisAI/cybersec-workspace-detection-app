@@ -7,8 +7,18 @@
 
 import subprocess
 import sys
-# Ensure missing serverless libraries are installed at runtime
-subprocess.check_call([sys.executable, "-m", "pip", "install", "geoip2", "netaddr", "--quiet"])
+import importlib.util
+
+# Install optional dependencies only when missing (avoid reinstalling every run)
+_REQUIRED_PY_DEPS = {
+    "geoip2": "geoip2",
+    "netaddr": "netaddr",
+}
+
+_missing = [pip_name for module_name, pip_name in _REQUIRED_PY_DEPS.items() if importlib.util.find_spec(module_name) is None]
+if _missing:
+    print(f"Installing missing Python dependencies: {_missing}")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "--quiet", *_missing])
 
 import builtins
 import time
@@ -136,7 +146,7 @@ meta = (
 if not meta:
     err_msg = f"Rule [{rule_id}] disabled or not found in registry."
     finalize_run("FAILED", 0, err_msg)
-    dbutils.notebook.exit(err_msg)
+    raise ValueError(err_msg)
 
 module_path = meta[0]["module_path"]
 callable_name = meta[0]["callable_name"]
@@ -163,10 +173,6 @@ try:
     row_count = df.count()
 
     print(f"Rule [{rule_id}] returned {row_count} findings.")
-
-    if row_count == 0:
-        finalize_run("SUCCESS", row_count)
-        dbutils.notebook.exit("SUCCESS")
 
     # 5. Build Standardized Payload Fields & Dedupe Key
 
@@ -302,16 +308,10 @@ try:
     )
 
     print(f"MERGE into Unified Table [{UNIFIED_TBL}] - DONE")
-    
+
     finalize_run("SUCCESS", row_count)
-    dbutils.notebook.exit("SUCCESS")
 
 except Exception as e:
-    # dbutils.notebook.exit("SUCCESS") raises a control-flow exception in Databricks.
-    # Do not convert it to FAILED status.
-    if str(e).startswith("Notebook exited:"):
-        raise
-
     err_str = str(e) + "\n" + traceback.format_exc()
     # Safely truncate error message
     err_str = err_str[:10000]
